@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time-Based To-Do List</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(120deg, #f6d365, #fda085);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 600px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 0.8rem;
+            border: 2px solid #eee;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+            min-width: 200px;
+        }
+
+        input[type="time"] {
+            padding: 0.8rem;
+            border: 2px solid #eee;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #fda085;
+        }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            background: #fda085;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: #f6d365;
+        }
+
+        .todo-list {
+            list-style: none;
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: #f8f8f8;
+            margin-bottom: 0.5rem;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            animation: slideIn 0.3s ease;
+        }
+
+        .time-badge {
+            background: #fda085;
+            color: white;
+            padding: 0.3rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+            margin-right: 1rem;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .todo-item:hover {
+            background: #f1f1f1;
+        }
+
+        .todo-item.completed {
+            background: #e8e8e8;
+            opacity: 0.7;
+        }
+
+        .todo-item.completed .todo-text {
+            text-decoration: line-through;
+            color: #888;
+        }
+
+        .todo-text {
+            flex: 1;
+            margin: 0 1rem;
+        }
+
+        .todo-item .delete-btn {
+            background: #ff7675;
+            padding: 0.5rem 1rem;
+        }
+
+        .todo-item .delete-btn:hover {
+            background: #d63031;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #888;
+            font-style: italic;
+            margin-top: 1rem;
+        }
+
+        .duration-input {
+            width: 80px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Time-Based To-Do List</h1>
+        <div class="input-section">
+            <input type="text" id="todo-input" placeholder="Add a new task...">
+            <input type="time" id="time-input">
+            <input type="number" id="duration-input" class="duration-input" placeholder="Mins" min="1">
+            <button onclick="addTodo()">Add</button>
+        </div>
+        <ul class="todo-list" id="todo-list">
+            <li class="empty-message">No tasks yet. Add a task to get started!</li>
+        </ul>
+    </div>
+
+    <script>
+        const todoInput = document.getElementById('todo-input');
+        const timeInput = document.getElementById('time-input');
+        const durationInput = document.getElementById('duration-input');
+        const todoList = document.getElementById('todo-list');
+
+        // Set default time to current time
+        const now = new Date();
+        timeInput.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+        todoInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addTodo();
+            }
+        });
+
+        function addTodo() {
+            const todoText = todoInput.value.trim();
+            const todoTime = timeInput.value;
+            const duration = durationInput.value;
+            
+            if (todoText === '' || todoTime === '') {
+                return;
+            }
+
+            const emptyMessage = todoList.querySelector('.empty-message');
+            if (emptyMessage) {
+                emptyMessage.remove();
+            }
+
+            const todoItem = document.createElement('li');
+            todoItem.className = 'todo-item';
+            
+            // Convert time to timestamp for sorting
+            const timeStamp = new Date();
+            const [hours, minutes] = todoTime.split(':');
+            timeStamp.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            todoItem.dataset.time = timeStamp.getTime();
+
+            const durationText = duration ? ` (${duration} mins)` : '';
+            
+            todoItem.innerHTML = `
+                <span class="time-badge">${todoTime}${durationText}</span>
+                <input type="checkbox" onclick="toggleTodo(this)">
+                <span class="todo-text">${todoText}</span>
+                <button class="delete-btn" onclick="deleteTodo(this)">Delete</button>
+            `;
+
+            // Insert todo item in chronological order
+            const items = Array.from(todoList.children);
+            const insertIndex = items.findIndex(item => {
+                if (item.classList.contains('empty-message')) return true;
+                return parseInt(item.dataset.time) > timeStamp.getTime();
+            });
+
+            if (insertIndex === -1) {
+                todoList.appendChild(todoItem);
+            } else {
+                todoList.insertBefore(todoItem, items[insertIndex]);
+            }
+
+            // Clear inputs
+            todoInput.value = '';
+            durationInput.value = '';
+
+            // Calculate and set next suggested time
+            if (duration) {
+                const nextTime = new Date(timeStamp.getTime() + duration * 60000);
+                timeInput.value = `${String(nextTime.getHours()).padStart(2, '0')}:${String(nextTime.getMinutes()).padStart(2, '0')}`;
+            }
+
+            saveTodos();
+        }
+
+        function toggleTodo(checkbox) {
+            const todoItem = checkbox.parentElement;
+            todoItem.classList.toggle('completed');
+            saveTodos();
+        }
+
+        function deleteTodo(button) {
+            const todoItem = button.parentElement;
+            todoItem.style.animation = 'slideIn 0.3s ease reverse';
+            
+            setTimeout(() => {
+                todoItem.remove();
+                if (todoList.children.length === 0) {
+                    todoList.innerHTML = '<li class="empty-message">No tasks yet. Add a task to get started!</li>';
+                }
+                saveTodos();
+            }, 300);
+        }
+
+        function saveTodos() {
+            const todos = [];
+            const todoItems = todoList.querySelectorAll('.todo-item');
+            
+            todoItems.forEach(item => {
+                const timeText = item.querySelector('.time-badge').textContent;
+                todos.push({
+                    text: item.querySelector('.todo-text').textContent,
+                    time: timeText,
+                    completed: item.classList.contains('completed'),
+                    timestamp: item.dataset.time
+                });
+            });
+
+            localStorage.setItem('todos', JSON.stringify(todos));
+        }
+
+        function loadTodos() {
+            const todos = JSON.parse(localStorage.getItem('todos')) || [];
+            
+            if (todos.length > 0) {
+                todoList.innerHTML = '';
+                todos.sort((a, b) => parseInt(a.timestamp) - parseInt(b.timestamp));
+                
+                todos.forEach(todo => {
+                    const todoItem = document.createElement('li');
+                    todoItem.className = 'todo-item' + (todo.completed ? ' completed' : '');
+                    todoItem.dataset.time = todo.timestamp;
+                    
+                    todoItem.innerHTML = `
+                        <span class="time-badge">${todo.time}</span>
+                        <input type="checkbox" onclick="toggleTodo(this)" ${todo.completed ? 'checked' : ''}>
+                        <span class="todo-text">${todo.text}</span>
+                        <button class="delete-btn" onclick="deleteTodo(this)">Delete</button>
+                    `;
+
+                    todoList.appendChild(todoItem);
+                });
+            }
+        }
+
+        loadTodos();
+    </script>
+</body>
+</html>
